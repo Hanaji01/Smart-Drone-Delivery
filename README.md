@@ -572,4 +572,4 @@ University of Perugia
 
 ## License
 
-This project is intended for educational purposes.
+This project is released under the MIT License.

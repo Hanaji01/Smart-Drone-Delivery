@@ -1,6 +1,0 @@
-__pycache__/
-*.py[cod]
-*.pt
-.venv/
-venv/
-.DS_Store

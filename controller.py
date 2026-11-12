@@ -21,17 +21,21 @@ from environment import Grid
 from sensors import DroneSensors
 
 
-# Configurazione: algoritmi abilitati per il confronto (tasto C)
+# Configurazione: algoritmi abilitati per il confronto (tasto C).
+# IDA* e RBFS sono esclusi: non tengono in memoria gli stati visitati, quindi
+# sulle mappe 8x8 con piu' consegne rivisitano gli stessi stati moltissime
+# volte (fino a decine di secondi). Restano selezionabili singolarmente
+# con i tasti 7 e 8.
 ENABLED_ALGORITHMS: dict[str, bool] = {
-    "BFS":    False,
-    "DFS":    False,
-    "IDS":    False,
-    "UCS":    False,
-    "Greedy": False,
-    "A*":     True,   
+    "BFS":    True,
+    "DFS":    True,
+    "IDS":    True,
+    "UCS":    True,
+    "Greedy": True,
+    "A*":     True,
     "IDA*":   False,
     "RBFS":   False,
-    "SMA*":   False,
+    "SMA*":   True,
 }
 
 # Strutture dati per la ricerca
@@ -348,23 +352,30 @@ class SearchController:
 
     def _dls(self, start: SearchState, limit: int):
         root  = SearchNode(start, None, None, 0.0)
-        stack = [(root, set())]
+        stack = [root]
+        # Profondità minima a cui ogni stato è già stato raggiunto in questa
+        # iterazione: se lo ritroviamo a una profondità uguale o maggiore, il
+        # suo sottoalbero è già stato esplorato con un budget almeno pari.
+        # Senza questa potatura il numero di cammini cresce in modo
+        # esponenziale con il limite e IDS non termina su una griglia 8x8.
+        best_depth = {start: 0}
         expanded, max_f = 0, 1
 
         while stack:
             max_f = max(max_f, len(stack))
-            node, path_states = stack.pop()
+            node = stack.pop()
             expanded += 1
             if self._is_goal(node.state):
                 return node, expanded, max_f
             if node.depth < limit:
                 for new_pos, cost, new_state in self._successors(node):
-                    if new_state not in path_states:
-                        stack.append((
+                    new_depth = node.depth + 1
+                    if best_depth.get(new_state, limit + 1) > new_depth:
+                        best_depth[new_state] = new_depth
+                        stack.append(
                             SearchNode(new_state, node, new_pos,
-                                       node.g_cost + cost, depth=node.depth + 1),
-                            path_states | {new_state}
-                        ))
+                                       node.g_cost + cost, depth=new_depth)
+                        )
         return None, expanded, max_f
 
     # ------------------------------------------------------------------

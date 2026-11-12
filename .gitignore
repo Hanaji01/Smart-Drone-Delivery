@@ -4,3 +4,6 @@ __pycache__/
 .venv/
 venv/
 .DS_Store
+
+# The trained model is needed to run the app
+!cnn_model.pt
